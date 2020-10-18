@@ -1,0 +1,201 @@
+---
+title: "Investigation of the Relationship between Number of Marriages and Several Other Variables"
+author: "Ying Tian (1005174240), Zhaowei Yao (1005333355), 
+Yuqing Wu (1004725737), Baoying Xuan (1004808149)"
+date: "October 19, 2020"
+output:
+  pdf_document: default
+bibliography: 
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+
+#install.packages("magrittr") # package installations are only needed the first time you use it
+#install.packages("dplyr")    # alternative installation of the %>%
+library(magrittr) # needs to be run every time you start R and want to use %>%
+library(dplyr)    # alternatively, this also loads %>%
+library(tidyverse)
+```
+
+```{r, include=FALSE, echo=FALSE}
+gss <- read.csv("gss.csv")
+```
+
+## Title of your Report
+
+# Name(s) of Author(s) 
+# Date
+
+## Abstract
+Here is where you give a brief (one paragraph overview of your entire paper). This should include some background/introduction, some methodology, results and conclusions.]
+
+## Introduction
+[Here is where you should give insight into the setting and introduce the goal of the analysis. Here you can introduce ideas and basic concepts regarding the study setting and the potential model. Again, this is the introduction, so you should be explaining the importance of the work that is ahead and hopefully build some suspense for the reader. You can also highlight what will be included in the subsequent sections.]
+
+## Data
+
+[Introduce the data, explain why it was selected. Make sure to comment on important features and highlight any potential drawbacks to the data.]
+
+## Model
+[Introduce the selected model here. It is expected that you will use some mathematical notation here. If you do please ensure that all notation is explained. You may also want to discuss any special (hypothetical) cases of your model here, as well as any caveats. ]
+
+[Model1 - Multiple Linear Regression]
+```{r}
+#get the dataframe from the csv file and get it cleaned by filtering out the N/A values
+dataframe<- gss %>% select(feelings_life, is_male, number_marriages,hh_size,age_at_first_marriage) %>% filter(!is.na(number_marriages)) %>% filter(!is.na(age_at_first_marriage)) %>% filter(!is.na(feelings_life)) %>% filter(!is.na(is_male))  
+
+#draw a histogram of number_marriages with the trendline, and adjust the color of the column
+Figure_1 <- ggplot(dataframe, aes(x = number_marriages)) + geom_histogram(aes(y = ..density..), bins = 4,binwidth = 1, color = "black", fill = "lightblue")+
+  stat_function(fun = dnorm, colour = "red",
+                      args = list(mean = mean(dataframe$number_marriages, na.rm = TRUE),
+                                 sd = sd(dataframe$number_marriages, na.rm = TRUE)))
+
+#To find out the relationship between number_marriages, and age_at_first_marriage, 
+#draw a scatter plot with X being number_marriages, and y being age_at_first_marriage.
+Figure_2 <- ggplot(dataframe, aes(y = number_marriages, x =age_at_first_marriage)) + geom_point() + labs(x = "number_marriages", title = "Figure_2 - Scatter Plot of Number of Marriages and Age at First Marriage")
+
+#To find out the relationship between number_marriages and other variables-age_at_first_marriage, feelings_life, hh_size, total_children, is_male
+#Generate a Multiple Regression Model with the number_marriages being the dependent variable and other variables stated above being the predictor variables
+table_1<- lm(number_marriages~ age_at_first_marriage+ feelings_life+ hh_size+ is_male,data = dataframe)
+summary(table_1)
+```
+
+[Model2 - Logistics Regression]
+```{r}
+library(tidyverse)
+#get the dataframe from the csv file and get it cleaned by filtering out the N/A values, and mutate another column called low_stability, which is a new dependent variable used to predict the stability of marriages. If someone's number of marriages is bigger than the mean of the total number of marriages, then it means that person has a low marriage stability.
+dataframe <- gss %>% select(number_marriages, age_at_first_marriage, feelings_life, hh_size,  is_male)
+dataframe <- dataframe %>% filter(!is.na(number_marriages)) %>% filter(!is.na(age_at_first_marriage)) %>% filter(!is.na(feelings_life)) %>% filter(!is.na(is_male)) %>% mutate(low_stability = ifelse(number_marriages >= mean(dataframe$number_marriages), 1, 0))
+
+
+#In order to examine what and how the parameters (age_at_first_marriage, hh_size and is_male) are going to influence the dependent variable (low_stability)
+table_3<-glm(low_stability ~ age_at_first_marriage + feelings_life + 
+    hh_size + is_male, data = dataframe, family = binomial)
+summary(table_3)
+
+```
+
+
+## Results
+[Here you will include all results. This includes descriptive statistics, graphs, figures, tables, and model results. Please ensure that everything is well formatted and in a report style. You must also provide an explanation of the results in this section. You can overflow to an Appendix if needed. 
+
+Please ensure that everything is well labelled. So if you have multiple histograms and plots, calling them Figure 1, 2, 3, etc. and referencing them as Figure 1, Figure 2, etc. in your report will be expected. The reader should not get lost in a sea of information. Make sure to have the results be clean, well formatted and digestible.]
+
+```{r}
+Figure_1
+
+Figure_2
+
+summary(table_1)
+
+summary(table_3)
+```
+
+
+## Discussion
+[Here you will discuss conclusions drawn from the results and comment on how it relates to the original goal of the study (which was specified in the Introduction).]
+
+[Interpretations - Model 1- Multiple Linear Regression Model] 
+
+As shown in Figure_1, the histogram of number of marriages is skewed to the right(i.e. positively skewed), with the right tail being much longer and the mass of the distribution concentrating on the left of the figure， with more than 60% of the total respondents have married once until when completing of the survey.  
+
+In the Figure_2 - Scatter Plot of Number of Marriages and Age at First Marriage, no linear relationship is shown between number of marriages and respondents' age at first marriage. However, it is interesting to find out the trend that, people who get married at a younger age is more likely to have more numbers of marriages. Which is proven by the data points in more than 3 times of marriages locating on the left-side of the plot(i.e. gets married at the age younger than 30).  
+
+The first model used here is Multiple Linear Regression Model, where all predictor variables are regular but only is_male being an indicator variable, with is_male = 1 as a male, and is_male = 0 as a female.
+
+$$Num\ of\ Marriages = \beta_0\ +\beta_1 * age\_ at\_first\ marriage +\beta_2* feelings\_ life +\beta_3\ * 
+   hh_size + \beta_4\ * is\_male+ \epsilon_i$$
+
+ 
+The first step to interpret the multiple regression analysis is to examine the F-statistic and the associated p-value in the summary table, at the bottom of table_1. It shows that p-value of the F-statistic is < 2.2e-16, meaning that it is highly significant, and at least one of the predictor variables is significantly related to the outcome variable.
+
+Secondly, by examining the coefficients table, which shows the estimate of regression beta coefficients and the associated t-statistic p-values. 
+(1)betas
+beta_0_hat(i.e. the estimated intercept) is 1.484385(with standard error of 0.047347).
+
+beta1_hat is -0.02238019: meaning that holding all other predictor variables - feelings of life, household size(i.e. hh_size) and gender(i.e.is_male) unchanged, the increase of age at first marriage by 1 year, on average, will lead to the number of marriages will decrease by 0.02238019.
+
+beta2_hat is 0.01348722: meaning that holding all other predictor variables - age at first marriage, household size and gender unchanged, the increase of feelings of life by 1 rating unit, on average, will lead to the number of marriages will increase by 0.01348722.The p-value is 1.890405e-59, much less than 0.01,thus reject H0 and support Ha that age at first marriage has correlation to the number of marriages.
+
+beta3_hat is 0.15315004：meaning that holding all other predictor variables - age at first marriage, feelings of life and gender unchanged, the increase of household size by 1 unit（1 more person in household), on average, will lead to the number of marriages will increase by 0.15315004.
+
+beta4_hat is 0.20742660. Since is_male is an indicator variable, the coefficient means the difference in average number of marriages between male respondents and females, which is 0.20742660.
+
+(2)standard errors
+Each estimates of the regression contains relatively small uncertainty and is considered to be good estimates, since all of the corresponding standard errors of the betas are relatively small.
+
+(3)t-statistic, p-values
+Assuming the significance level equal to 0.05, we set the hypothesis here for each coefficient as the following: 
+Null Hypothesis H0: the corresponding predictor has no correlation to the dependent variable(i.e. number_marriages).
+Alternative Hypothesis Ha: the corresponding predictor does have correlation to number_marriages.
+
+As shown in the table, all of the p-values of the corresponding coefficients are much less than the significance value of 0.05 (as proven by *** on the right of the p-values, meaning that they are all between 0 and 0.0001),thus reject the null hypothesis H0 for all the predictors, and support the alternative hypothesis Ha that the predictor variables stated in the model have correlation to the number of marriages.
+
+Lastly we can conclude the result of the estimated model:
+Since is_male is an indicator variable,when the respondent is male, it is equal to 1; and when the respondent is female,it is equal to 0. 
+Thus, if we are predicting the number of marriages for a female respondent, the estimated multiple linear regression model on the number_marriages is: 
+$$For\ Males\ : \hat\ Num\ of\ Marriages_ = 1.484385\ -0.022380 * age\_ at\_first\ marriage + 0.013487* feelings\_ life + 0.153150 * 
+   hh\_size + 0.207427 * 1+ \epsilon_i$$
+  
+$$For\ Females\ : \hat\ Num\ of\ Marriages_ = 1.484385\ -0.022380 * age\_ at\_first\ marriage +0.013487* feelings\_ life +0.153150 * 
+   hh\_size +0.207427 * 0 + \epsilon_i$$
+
+
+[Interpretations - Model2 - Logistic Regression]  
+We interpret the logistic model data by examining Deviance Residuals and coefficients table.
+
+First, as it given by the summary of table_3, we notice the Deviance Residuals look good since they are closed to being centered on '0' and roughly symmetrical. 
+
+Second, we interpret the coefficients table by examining the coefficients table, which shows the estimated regression beta and the associated t-statistic p-values. 
+
+
+(1)betas
+beta_0_hat (i.e.the estimated intercept) is -0.006113
+
+beta1_hat is (i.e.the coefficient of age_at_first_marriage) is -0.117605, meaning that holding all other predictor variables - feelings of life, household size(i.e. hh_size) and gender(i.e.is_male) unchanged, the increase of age at first marriage by 1 year, on average, will lead to the number of marriages will decrease by 0.117605.
+
+beta2_hat (i.e.feelings_life)is 0.069055: meaning that holding all other predictor variables - age at first marriage, household size and gender unchanged, the increase of feelings of life by 1 rating unit, on average, will lead to the number of marriages will increase by 0.069055. The p-value is < 2e-16, much less than 0.01,thus reject H0 and support Ha that age at first marriage has correlation to the number of marriages.
+
+beta3_hat (i.e.hh_size) is 0.739606：meaning that holding all other predictor variables - age at first marriage, feelings of life and gender unchanged, the increase of household size by 1 unit（1 more person in household), on average, will lead to the number of marriages will increase by 0.739606.
+
+beta4_hat is (i.e.is_male) 0.892004. Since is_male is an indicator variable, the coefficient means the difference in average number of marriages between male respondents and females, which is 0.892004. 
+This number indicates the increases in the number of times that a male has of getting married. 
+
+(2)standard errors
+Each estimates of the regression contains relatively small uncertainty and is considered to be good estimates, since all of the corresponding standard errors of the betas are relatively small.
+
+(3)t-statistic, p-values
+Assuming the significance level equal to 0.05, we set the hypothesis here for each coefficient as the following: 
+Null Hypothesis H0: the corresponding predictor has no correlation to the dependent variable(i.e. number_marriages).
+Alternative Hypothesis Ha: the corresponding predictor does have correlation to number_marriages.
+
+As it given by table_3, all p-values are well-below 0.05 and thus, all parameters are significantly related to the dependent variable - number_marriages. Also, there are '***' right next to all p-values, meaning that they are all significant  
+
+(4)AIC
+We have AIC which in this context, is just the Residual Deviance adjusted for the number od parameters in the model.
+
+(5)Number of Fisher Scoring iterations
+We have the number of Fisher Scoring iterations which is 4, telling that how quickly the glm() function converged on the maximum odds estimates for the coefficients.
+
+(6)Result
+Since is_male is an indicator variable,when the respondent is a male, it is equal to 1; and when the respondent is a female,it is equal to 0. 
+Thus, if we are predicting the number of marriages for a male respondent, the estimated multiple linear regression model on the number_marriages is: 
+
+$$For\ Males\ : \hat\ Num\ of\ Marriages_ = -0.006113\ -0.117605 * age\_ at\_first\ marriage + 0.069055* feelings\_ life + 0.739606 * 
+   hh\_size + 0.892004 *1 + \epsilon_i$$
+  
+If we are predicting the number of marriages for a female respondent, the estimated multiple linear regression model on the number_marriages is:   
+$$For\ Females\ : \hat\ Num\ of\ Marriages_ =-0.006113\ -0.117605 * age\_ at\_first\ marriage + 0.069055* feelings\_ life + 0.739606 * 
+   hh\_size + 0.892004 *0 + \epsilon_i$$
+   
+# Weaknesses
+
+Here we discuss weaknesses of the study, data, analysis, etc. You can also discuss areas for improvement.
+
+# Next Steps
+
+Here you discuss subsequent work to be done after this report. This can include next steps in terms of statistical analysis (perhaps there is a more efficient algorithm available, or perhaps there is a caveat in the data that would allow for some new technique). Future steps should also be specified in terms of the study setting (eg. including a follow-up survey on something, or a subsequent study that would complement the conclusions of your report).
+
+
+## References
